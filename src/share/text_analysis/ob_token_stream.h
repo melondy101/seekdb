@@ -81,6 +81,8 @@ private:
 private:
   const char *curr_token_ptr_;
   int64_t trav_pos_;
+  // 800516: 256 项分隔符查表，避免逐字节调用 ob_isspace/ob_iscntrl/ob_ispunct 三次 charset 查找
+  bool delim_tbl_[256];
 };
 
 class ObTokenNormalizer : public ObITokenStream

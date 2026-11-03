@@ -80,8 +80,14 @@ void ObTextWhitespaceTokenizer::reset()
 int ObTextWhitespaceTokenizer::inner_open(const ObDatum &document, const ObCharsetInfo *cs)
 {
   int ret = OB_SUCCESS;
+  UNUSED(document);
   curr_token_ptr_ = nullptr;
   trav_pos_ = 0;
+  // 800516: 预先按字节值建表，热路径只做一次数组索引
+  for (int32_t i = 0; i < 256; ++i) {
+    const char c = static_cast<char>(i);
+    delim_tbl_[i] = ob_isspace(cs, c) || ob_iscntrl(cs, c) || ob_ispunct(cs, c);
+  }
   return ret;
 }
 
@@ -136,10 +142,7 @@ int ObTextWhitespaceTokenizer::get_next(ObDatum &next_token, int64_t &token_freq
 
 bool ObTextWhitespaceTokenizer::found_delimiter()
 {
-  bool found = false;
-  const char *curr_char = input_doc_->ptr_ + trav_pos_;
-  found = ob_isspace(cs_, *curr_char) || ob_iscntrl(cs_, *curr_char) || ob_ispunct(cs_, *curr_char);
-  return found;
+  return delim_tbl_[static_cast<unsigned char>(input_doc_->ptr_[trav_pos_])];
 }
 
 ObTokenNormalizer::ObTokenNormalizer()
