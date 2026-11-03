@@ -11857,11 +11857,14 @@ int ObLogPlan::do_alloc_values_table_path(ValuesTablePath *values_table_path,
     ObSEArray<ObColumnRefRawExpr *, 4> column_exprs;
     if (OB_FAIL(get_stmt()->get_column_exprs(values_table_path->table_id_, column_exprs))) {
     } else if (OB_UNLIKELY(column_exprs.count() != table_def->column_cnt_)) {
+      LOG_INFO("values table column count mismatch", K(column_exprs.count()),
+               K(table_def->column_cnt_));
       ret = OB_ERR_UNEXPECTED;
     } else if (OB_FAIL(values_op->get_column_exprs().assign(column_exprs))) {
     } else if (OB_FAIL(append(values_op->get_filter_exprs(), values_table_path->filter_))) {
     } else if (OB_FAIL(values_op->compute_property(values_table_path))) {
     }
+    LOG_INFO("values table access op allocated", K(ret), K(column_exprs.count()));
   }
   return ret;
 }

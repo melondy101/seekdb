@@ -880,6 +880,7 @@ int ObSelectResolver::resolve_normal_query(const ParseNode &parse_tree)
     expr_resv_ctx_.set_new_scope();
   }
   OZ( resolve_field_list(*(parse_tree.children_[PARSE_SELECT_SELECT])));
+  LOG_INFO("stage after field list", K(ret));
 
   /* resolve group by clause */
   OZ( resolve_group_clause(group_by) );
@@ -890,6 +891,7 @@ int ObSelectResolver::resolve_normal_query(const ParseNode &parse_tree)
   OZ( resolve_order_clause(parse_tree.children_[PARSE_SELECT_ORDER]) );
   OZ( resolve_approx_clause(parse_tree.children_[PARSE_SELECT_APPROX]));
   OZ( resolve_limit_clause(parse_tree.children_[PARSE_SELECT_LIMIT]) );
+  LOG_INFO("stage after limit", K(ret));
   OZ( resolve_vector_index_params(parse_tree.children_[PARSE_SELECT_VECTOR_INDEX_PARAMS]));
   OZ( resolve_fetch_clause(parse_tree.children_[PARSE_SELECT_FETCH]) );
   OZ( resolve_check_option_clause(parse_tree.children_[PARSE_SELECT_WITH_CHECK_OPTION]) );
@@ -930,6 +932,7 @@ int ObSelectResolver::resolve_normal_query(const ParseNode &parse_tree)
   }
 
   OZ( select_stmt->formalize_stmt(session_info_) );
+  LOG_INFO("stage after formalize stmt", K(ret));
 
   if (OB_SUCC(ret) && has_nested_aggr_) {
     if (OB_FAIL(check_aggr_in_select_scope(select_stmt))) {

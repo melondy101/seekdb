@@ -1692,7 +1692,11 @@ int ObStaticEngineCG::generate_spec(ObLogValuesTableAccess &op,
   if (OB_ISNULL(table_def = op.get_values_table_def()) ||
       OB_UNLIKELY(op.get_output_exprs().empty())) {
     ret = OB_ERR_UNEXPECTED;
+    LOG_INFO("cg values table invalid", K(ret), K(table_def != NULL),
+             K(op.get_output_exprs().count()));
   } else {
+    LOG_INFO("cg values table spec", K(op.get_column_exprs().count()),
+             K(table_def->access_objs_.count()), K(table_def->access_type_));
     spec.access_type_ = table_def->access_type_;
     spec.start_param_idx_ = table_def->start_param_idx_;
     spec.end_param_idx_ = table_def->end_param_idx_;

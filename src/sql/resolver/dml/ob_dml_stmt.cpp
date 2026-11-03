@@ -1552,8 +1552,11 @@ int ObDMLStmt::formalize_stmt_expr_reference(ObRawExprFactory *expr_factory,
     for (int64_t i = 0; OB_SUCC(ret) && i < column_items_.count(); i++) {
       TableItem *table_item = NULL;
       ColumnItem &column_item = column_items_.at(i);
-      if (OB_ISNULL(column_item.expr_) ||
-          OB_ISNULL(table_item = get_table_item_by_id(column_item.table_id_))) {
+      table_item = get_table_item_by_id(column_item.table_id_);
+      LOG_INFO("formalize col ref", K(i), K(column_item.table_id_),
+               K(column_item.expr_ != NULL), K(table_item != NULL),
+               K(column_items_.count()), K(table_items_.count()));
+      if (OB_ISNULL(column_item.expr_) || OB_ISNULL(table_item)) {
         ret = OB_ERR_UNEXPECTED;
       } else if (table_item->is_function_table() ||
                  table_item->is_json_table() ||
@@ -4484,6 +4487,21 @@ int ObValuesTableDef::deep_copy(const ObValuesTableDef &other,
     column_cnt_ = other.column_cnt_;
     row_cnt_ = other.row_cnt_;
     is_const_ = other.is_const_;
+    file_type_ = other.file_type_;
+    has_header_ = other.has_header_;
+    field_delim_ = other.field_delim_;
+    field_quote_ = other.field_quote_;
+    field_escape_ = other.field_escape_;
+    if (OB_FAIL(ob_write_string(*allocator, other.file_path_, file_path_))) {
+    } else if (OB_FAIL(ob_write_string(*allocator, other.null_str_, null_str_))) {
+    } else {
+      for (int64_t i = 0; OB_SUCC(ret) && i < other.column_names_.count(); ++i) {
+        ObString tmp_name;
+        if (OB_FAIL(ob_write_string(*allocator, other.column_names_.at(i), tmp_name))) {
+        } else if (OB_FAIL(column_names_.push_back(tmp_name))) {
+        }
+      }
+    }
     for (int64_t i = 0; OB_SUCC(ret) && i < other.access_objs_.count(); ++i) {
       const ObObjParam &obj = other.access_objs_.at(i);
       ObObjParam tmp_obj = obj;

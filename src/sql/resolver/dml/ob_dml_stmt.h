@@ -103,12 +103,15 @@ typedef struct ObJsonTableDef {
 
 struct ObValuesTableDef {
   ObValuesTableDef() : start_param_idx_(-1), end_param_idx_(-1), column_cnt_(0), row_cnt_(0),
-                       access_type_(ACCESS_EXPR), is_const_(false) {}
+                       access_type_(ACCESS_EXPR), is_const_(false), file_type_(0),
+                       has_header_(true), field_delim_(','), field_quote_('"'),
+                       field_escape_('\0') {}
   enum TableAccessType {
     ACCESS_EXPR = 0,  // expr, one by one
     FOLD_ACCESS_EXPR, // expr, one expr->ObSqlArray
     ACCESS_PARAM,     // by a continuous space of param_store
     ACCESS_OBJ,       // ObObj one by one, used for non-parametric
+    FILE_ACCESS,      // file as database, streaming scan of a local file
   };
   int deep_copy(const ObValuesTableDef &other,
                 ObIRawExprCopier &expr_copier,
@@ -124,6 +127,15 @@ struct ObValuesTableDef {
   TableAccessType access_type_;
   bool is_const_; // values table’s outputs are all params.
   common::ObArray<ObRawExprResType, common::ModulePageAllocator, true> column_types_;
+  // fields for FILE_ACCESS
+  common::ObString file_path_;
+  int64_t file_type_;   // 0: csv
+  bool has_header_;
+  char field_delim_;
+  char field_quote_;
+  char field_escape_;
+  common::ObString null_str_;
+  common::ObArray<common::ObString, common::ModulePageAllocator, true> column_names_;
   virtual TO_STRING_KV(K(column_cnt_), K(row_cnt_), K(access_exprs_), K(start_param_idx_),
                        K(end_param_idx_), K(access_objs_), K(column_ndvs_), K(column_nnvs_),
                        K(access_type_), K(is_const_), K(column_types_));

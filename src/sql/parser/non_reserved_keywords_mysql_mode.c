@@ -643,6 +643,7 @@ static const NonReservedKeyword Mysql_none_reserved_keywords[] =
   {"read", READ},
   {"read_write", READ_WRITE},
   {"read_consistency", READ_CONSISTENCY},
+  {"read_csv", READ_CSV},
   {"read_only", READ_ONLY},
   {"reads", READS},
   {"real", REAL},

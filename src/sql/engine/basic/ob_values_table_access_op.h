@@ -19,6 +19,7 @@
 
 #include "sql/engine/ob_operator.h"
 #include "sql/engine/expr/ob_datum_cast.h"
+#include "sql/engine/basic/ob_file_csv_reader.h"
 
 namespace oceanbase
 {
@@ -56,6 +57,10 @@ public:
   virtual void destroy() override { ObOperator::destroy(); }
 private:
   int calc_next_row();
+  int calc_next_row_from_file();
+  int open_file();
+  int skip_header();
+  int cast_file_field(const common::ObString &field, bool is_null, ObExpr *dst_expr);
   int calc_datum_from_expr(const int64_t col_idx,
                            const int64_t row_idx,
                            ObExpr *src_expr,
@@ -76,6 +81,11 @@ private:
   common::ObCastMode cm_;
   int64_t row_idx_;
   int64_t row_cnt_;
+  ObFileCsvReader file_reader_;
+  common::ObSEArray<common::ObString, 32> file_fields_;
+  bool file_opened_;
+  bool file_has_header_;
+  common::ObString file_null_str_;
 };
 
 } // end namespace sql
