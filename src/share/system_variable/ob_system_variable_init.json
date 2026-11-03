@@ -2443,6 +2443,19 @@
     "background_cn": "",
     "ref_url": ""
   },
+  "ai_column_strict_read": {
+    "id": 10755,
+    "name": "ai_column_strict_read",
+    "default_value": "0",
+    "base_value": "0",
+    "data_type": "bool",
+    "info": "When enabled, statements referencing an AI column fail if any row of that column is not READY.",
+    "flags": "SESSION | NEED_SERIALIZE",
+    "publish_version": "",
+    "info_cn": "",
+    "background_cn": "",
+    "ref_url": ""
+  },
   "_px_min_granules_per_slave": {
     "id": 10101,
     "placeholder": true,
