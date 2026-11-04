@@ -45,6 +45,8 @@ public:
 
 private:
   static constexpr int64_t NGRAM_ARRAY_SIZE = ObFTSLiteral::FT_NGRAM_MAX_TOKEN_SIZE_UPPER_BOUND + 4;
+  // 800516: ASCII 分类表长度（0x00..0x7F 均为单字节字符）
+  static constexpr int32_t ASCII_DELIM_TBL_SIZE = 128;
   struct Word
   {
     const char *ptr;
@@ -90,6 +92,9 @@ private:
   const char *fulltext_end_;
   const char *cur_;
   Window window_;
+  // 800516: 128 项 ASCII 分隔符表，热路径对 ASCII 字节只做一次数组索引，
+  // 省掉每字符一次 ob_mbcharlen_ptr 和一次 cs_->cset->ctype 间接调用
+  bool ascii_delim_tbl_[ASCII_DELIM_TBL_SIZE];
 
   bool is_inited_;
 };

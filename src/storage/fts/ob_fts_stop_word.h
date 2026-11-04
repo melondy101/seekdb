@@ -121,6 +121,8 @@ public:
 private:
   bool is_min_max_word(const int64_t c_len) const;
   int casedown_word(const ObFTWord &src, ObFTWord &dst);
+  // 800516: 判断 token 是否为"纯小写 ASCII"，这类 token 不需要做 casedown
+  static bool is_lower_ascii_word(const common::ObString &word);
   int check_stopword(const ObFTWord &word, bool &is_stopword);
   int groupby_word(const ObFTWord &word, const int64_t word_cnt);
 private:

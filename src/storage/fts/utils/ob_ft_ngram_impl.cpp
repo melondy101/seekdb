@@ -58,6 +58,16 @@ int ObFTNgramImpl::init(const ObCharsetInfo *const cs,
     window_.reset();
     window_.min_ngram_size_ = min;
     window_.max_ngram_size_ = max;
+    // 800516: 预建 ASCII 分类表。中英文混合文本里绝大多数字节是 ASCII，
+    // 建表后热路径只需一次数组索引，不再逐字符调用 ob_mbcharlen_ptr + cset->ctype。
+    for (int32_t i = 0; i < ASCII_DELIM_TBL_SIZE; ++i) {
+      char byte_buf[2] = { static_cast<char>(i), 0 };
+      int type = 0;
+      cs->cset->ctype(cs, &type,
+                      reinterpret_cast<const uchar *>(byte_buf),
+                      reinterpret_cast<const uchar *>(byte_buf) + 1);
+      ascii_delim_tbl_[i] = !true_word_char(type, static_cast<char>(i));
+    }
     is_inited_ = true;
   }
   return ret;
@@ -103,26 +113,40 @@ int ObFTNgramImpl::get_next_token(const char *&word,
             window_.meet_delimiter_ = true;
             window_.is_last_batch_ = true;
           } else {
-            const int64_t c_len = ob_mbcharlen_ptr(cs_, cur_, fulltext_end_);
-            if (cur_ + c_len > fulltext_end_ || 0 == c_len) {
-              // if invalid char, end it
-              window_.meet_delimiter_ = true;
-              window_.is_last_batch_ = true;
-            } else {
-              int type = 0;
-              cs_->cset->ctype(cs_, &type, (uchar *)cur_, (uchar *)fulltext_end_);
-              bool delimiter = !true_word_char(type, *cur_);
-              if (delimiter) {
+            const unsigned char first_byte = static_cast<unsigned char>(*cur_);
+            if (first_byte < ASCII_DELIM_TBL_SIZE) {
+              // 800516: ASCII 单字节快速路径，长度固定为 1、分隔符判定走查表
+              if (ascii_delim_tbl_[first_byte]) {
                 window_.meet_delimiter_ = true;
               } else {
                 Word word;
-                word.len = c_len;
+                word.len = 1;
                 word.ptr = cur_;
                 window_.add_word(word);
               }
+              ++cur_;
+            } else {
+              const int64_t c_len = ob_mbcharlen_ptr(cs_, cur_, fulltext_end_);
+              if (cur_ + c_len > fulltext_end_ || 0 == c_len) {
+                // if invalid char, end it
+                window_.meet_delimiter_ = true;
+                window_.is_last_batch_ = true;
+              } else {
+                int type = 0;
+                cs_->cset->ctype(cs_, &type, (uchar *)cur_, (uchar *)fulltext_end_);
+                bool delimiter = !true_word_char(type, *cur_);
+                if (delimiter) {
+                  window_.meet_delimiter_ = true;
+                } else {
+                  Word word;
+                  word.len = c_len;
+                  word.ptr = cur_;
+                  window_.add_word(word);
+                }
+              }
+              // anyway step next.
+              cur_ += c_len;
             }
-            // anyway step next.
-            cur_ += c_len;
           }
         } else {
           window_.out_ngram(word, word_len, char_cnt, word_freq);

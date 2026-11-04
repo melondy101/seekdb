@@ -158,21 +158,41 @@ bool ObAddWord::is_min_max_word(const int64_t c_len) const
   return flag_.min_max_word() && (c_len < min_token_size_ || c_len > max_token_size_);
 }
 
+bool ObAddWord::is_lower_ascii_word(const common::ObString &word)
+{
+  bool is_lower_ascii = true;
+  const char *ptr = word.ptr();
+  for (int64_t i = 0; i < word.length() && is_lower_ascii; ++i) {
+    const unsigned char c = static_cast<unsigned char>(ptr[i]);
+    // 出现非 ASCII 字节或 ASCII 大写字母时都需要走通用 casedown
+    if (c >= 0x80 || (c >= 'A' && c <= 'Z')) {
+      is_lower_ascii = false;
+    }
+  }
+  return is_lower_ascii;
+}
+
 int ObAddWord::casedown_word(const ObFTWord &src, ObFTWord &dst)
 {
   int ret = OB_SUCCESS;
   if (OB_UNLIKELY(src.empty())) {
     ret = OB_INVALID_ARGUMENT;
   } else if (flag_.casedown()) {
-    ObString dst_str;
-    if (OB_FAIL(ObCharset::tolower(
-                    word_meta_.get_collation_type(),
-                    src.get_word().get_string(),
-                    dst_str,
-                    allocator_))) {
+    if (is_lower_ascii_word(src.get_word().get_string())) {
+      // 800516: 纯小写 ASCII token 的 casedown 结果与原串逐字节相同，
+      // 直接复用原指针，省掉每个 token 一次 ObCharset::tolower 的分配与整串拷贝
+      dst = src;
     } else {
-      ObFTWord tmp(dst_str.length(), dst_str.ptr(), word_meta_);
-      dst = tmp;
+      ObString dst_str;
+      if (OB_FAIL(ObCharset::tolower(
+                      word_meta_.get_collation_type(),
+                      src.get_word().get_string(),
+                      dst_str,
+                      allocator_))) {
+      } else {
+        ObFTWord tmp(dst_str.length(), dst_str.ptr(), word_meta_);
+        dst = tmp;
+      }
     }
   } else {
     dst = src;
@@ -205,14 +225,15 @@ int ObAddWord::groupby_word(const ObFTWord &word, const int64_t word_freq)
     if (OB_FAIL(word_map_.set_refactored(word, 1/*word count*/))) {
     }
   } else if (OB_FAIL(word_map_.get_refactored(word, word_count)) && OB_HASH_NOT_EXIST != ret) {
+  } else if (OB_HASH_NOT_EXIST == ret) {
+    ret = OB_SUCCESS;
+    if (OB_FAIL(word_map_.set_refactored(word, 1/*word count*/))) {
+    }
+  } else if (OB_ISNULL(word_map_.get(word))) {
+    ret = OB_ERR_UNEXPECTED;
   } else {
-    if (OB_HASH_NOT_EXIST == ret) {
-      word_count = 1;
-    } else {
-      word_count += word_freq;
-    }
-    if (OB_FAIL(word_map_.set_refactored(word, word_count, 1/*overwrite*/))) {
-    }
+    // 800516: 已存在时直接原地累加，避免 set_refactored(overwrite) 的第二次哈希查找
+    *word_map_.get(word) += word_freq;
   }
   return ret;
 }
